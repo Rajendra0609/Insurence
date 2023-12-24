@@ -1,0 +1,34 @@
+pipeline {
+    agent any
+    tools {
+        maven 'maven'
+    }
+    stages {
+        stage('clone') {
+            steps {
+                git branch: 'main', credentialsId: 'raja', url: 'https://github.com/Rajendra0609/Insurence.git'
+            }
+        }
+        stage('clean') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+        stage('compile') {
+            steps {
+                sh 'mvn compile'
+            }
+        }
+        stage('build') {
+            steps {
+                sh 'mvn clean install'
+            }
+        }
+        stage('junittest') {
+            steps {
+                sh 'mvn test'
+                sh 'mvn test -Dsurefire.suiteXmlFiles=testng.xml'
+            }
+        }
+    }
+}
