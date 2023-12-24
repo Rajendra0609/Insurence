@@ -3,7 +3,17 @@ pipeline {
     tools {
         maven 'maven'
     }
+    environment {
+        DOCKER_TAG = "v1.0.0" // Default version tag
+    }
     stages {
+        stage('Set Version') {
+            steps {
+                script {
+                    DOCKER_TAG = "v1.0.0-${BUILD_NUMBER}" // You can use the build number as part of the tag
+                }
+            }
+        }
         stage('clone') {
             steps {
                 git branch: 'main', credentialsId: 'raja', url: 'https://github.com/Rajendra0609/Insurence.git'
@@ -28,6 +38,62 @@ pipeline {
             steps {
                 sh 'mvn test'
                 sh 'mvn test -Dsurefire.suiteXmlFiles=testng.xml'
+            }
+        }
+        stage('image') {
+            steps {
+                sh "docker build -t daggu1997/insurence:${DOCKER_TAG} ."
+                sh "docker login -u daggu1997 -p Rajendra@1997"
+                sh "docker push daggu1997/insurence:${DOCKER_TAG}"
+            }
+        }
+        stage('Selenium test cases') {
+            steps {
+               sh "mvn clean test "
+            }
+        }
+        stage('Send Notification Email') {
+            steps {
+                script {
+                    def recipient = "rajendra.daggubati@gmail.com"  // Email recipient
+                    def subject = "Pipeline Status Notification"  // Email subject
+                    def body = """
+                        <p>Hello,</p>
+                        <p>This is an automated notification regarding the status of the Jenkins pipeline.</p>
+                        <p>The current status of the pipeline is: ${currentBuild.currentResult}</p>
+                        <p>For more details, visit Jenkins: ${env.BUILD_URL}</p>
+                        <p>Thank you.</p>
+                    """
+                    emailext (
+                        to: recipient,
+                        subject: subject,
+                        body: body,
+                        mimeType: 'text/html'
+                    )
+                }
+            }
+        }
+    }
+    post {
+        always {
+            script {
+                def recipient = "rajendra.daggubati@gmail.com"  // Email recipient for failure notifications
+                if (currentBuild.result != 'SUCCESS') {
+                    def failureSubject = "Pipeline Failed: ${currentBuild.fullDisplayName}"
+                    def failureBody = """
+                        <p>Hello,</p>
+                        <p>This is an automated notification regarding the failure of the Jenkins pipeline.</p>
+                        <p>The pipeline ${currentBuild.fullDisplayName} has failed.</p>
+                        <p>For more details, visit Jenkins: ${env.BUILD_URL}</p>
+                        <p>Thank you.</p>
+                    """
+                    emailext (
+                        to: recipient,
+                        subject: failureSubject,
+                        body: failureBody,
+                        mimeType: 'text/html'
+                    )
+                }
             }
         }
     }
