@@ -17,11 +17,7 @@ pipeline {
         stage('clone') {
             steps {
                 git branch: 'main', credentialsId: 'raja', url: 'https://github.com/Rajendra0609/Insurence.git'
-            } catch (Exception e) {
-                currentBuild.result = 'FAILURE'
-                echo "Test failed. Retrying..."
-                retry(2) // Number of times to retry
-            }
+            } 
         }
         stage('clean') {
             steps {
@@ -31,64 +27,53 @@ pipeline {
         stage('compile') {
             steps {
                 sh 'mvn compile'
-            } catch (Exception e) {
-                currentBuild.result = 'FAILURE'
-                echo "Test failed. Retrying..."
-                retry(2) // Number of times to retry
-            }
+            } 
         }
         stage('build') {
             steps {
                 sh 'mvn clean install'
-            } catch (Exception e) {
-                currentBuild.result = 'FAILURE'
-                echo "Test failed. Retrying..."
-                retry(2) // Number of times to retry
-            }
+            } 
         }
         stage('junittest') {
             steps {
                 sh 'mvn test'
                 sh 'mvn test -Dsurefire.suiteXmlFiles=testng.xml'
-            } catch (Exception e) {
-                currentBuild.result = 'FAILURE'
-                echo "Test failed. Retrying..."
-                retry(2) // Number of times to retry
-            }
+            } 
         }
         stage('image') {
             steps {
                 sh "docker build -t daggu1997/insurence:${DOCKER_TAG} ."
-                sh "docker login -u username -p password"
+                sh "docker login -u uname -p Password"
                 sh "docker push daggu1997/insurence:${DOCKER_TAG}"
-            } catch (Exception e) {
-                currentBuild.result = 'FAILURE'
-                echo "Test failed. Retrying..."
-                retry(2) // Number of times to retry
-            }
+            } 
         }
         stage('Selenium test cases') {
             steps {
                sh "mvn clean test "
-            } catch (Exception e) {
-                currentBuild.result = 'FAILURE'
-                echo "Test failed. Retrying..."
-                retry(2) // Number of times to retry
-            }
+            } 
         }
         stage('Image scan') {
             steps {
-                sh 'trivy image --format template --template "@/usr/local/share/trivy/templates/html.tpl" -o report.html daggu1997/insurence:${DOCKER_TAG} '
-            } catch (Exception e) {
-                currentBuild.result = 'FAILURE'
-                echo "Test failed. Retrying..."
-                retry(2) // Number of times to retry
+                script {
+                    try {
+                        sh 'trivy image --format template --template "@/usr/local/share/trivy/templates/html.tpl" -o report.html daggu1997/insurence:${DOCKER_TAG} '
+                        
+                    } catch (Exception e) {
+                        currentBuild.result = 'FAILURE'
+                        echo "Image scan failed. Retrying..."
+                        error("Image scan failed: ${e.message}")
+                        
+                    }
+                    
+                }
+                
             }
+            
         }
         stage('Send Notification Email') {
             steps {
                 script {
-                    def recipient = "mail address"  // Email recipient
+                    def recipient = "@gmail.com"  // Email recipient
                     def subject = "Pipeline Status Notification"  // Email subject
                     def body = """
                         <p>Hello,</p>
@@ -110,7 +95,7 @@ pipeline {
     post {
         always {
             script {
-                def recipient = "mail address"  // Email recipient for failure notifications
+                def recipient = "@gmail.com"  // Email recipient for failure notifications
                 if (currentBuild.result != 'SUCCESS') {
                     def failureSubject = "Pipeline Failed: ${currentBuild.fullDisplayName}"
                     def failureBody = """
