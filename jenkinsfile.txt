@@ -52,6 +52,11 @@ pipeline {
                sh "mvn clean test "
             }
         }
+        stage('Image Scan') {
+            steps {
+      	        sh ' trivy image --format template --template "@/usr/local/share/trivy/templates/html.tpl" -o report.html daggu1997/insurence:${DOCKER_TAG} '
+            }
+        }
         stage('Send Notification Email') {
             steps {
                 script {
